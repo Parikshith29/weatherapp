@@ -24,6 +24,10 @@ export interface CurrentWeatherData {
   };
 }
 
+// Determine base URL based on environment
+const isProduction = import.meta.env.PROD;
+const BASE_URL = isProduction ? '/api/weather' : 'http://api.weatherstack.com';
+
 export interface HistoricalWeatherData {
   location: {
     name: string;
@@ -54,17 +58,41 @@ export interface MarineWeatherData {
   };
 }
 
+// Helper to get URL and params based on environment
+const getRequestConfig = (endpoint: string, params: Record<string, any>) => {
+  if (isProduction) {
+    // Production: Use proxy
+    // URL: /api/weather
+    // Params: endpoint, query, etc. (API Key is handled server-side if set in Vercel)
+    const { access_key, ...restParams } = params; // Remove access_key if relying on server env
+    return {
+      url: BASE_URL,
+      params: {
+        ...restParams,
+        endpoint
+      }
+    };
+  } else {
+    // Development: Use direct API
+    // URL: http://api.weatherstack.com/<endpoint>
+    return {
+      url: `${BASE_URL.replace('/api/weather', 'http://api.weatherstack.com')}/${endpoint}`,
+      params
+    };
+  }
+};
+
 /**
  * Fetch current weather data for a location
  */
 export async function getCurrentWeather(query: string): Promise<CurrentWeatherData> {
   try {
-    const response = await axios.get(`${BASE_URL}/current`, {
-      params: {
-        access_key: API_KEY,
-        query,
-      },
+    const config = getRequestConfig('current', {
+      access_key: API_KEY, // Passed in dev, ignored/removed in prod helper if we want
+      query,
     });
+
+    const response = await axios.get(config.url, { params: config.params });
 
     if (response.data.error) {
       throw new Error(response.data.error.info || 'Failed to fetch weather data');
@@ -87,13 +115,13 @@ export async function getHistoricalWeather(
   date: string
 ): Promise<HistoricalWeatherData> {
   try {
-    const response = await axios.get(`${BASE_URL}/historical`, {
-      params: {
-        access_key: API_KEY,
-        query,
-        historical_date: date,
-      },
+    const config = getRequestConfig('historical', {
+      access_key: API_KEY,
+      query,
+      historical_date: date,
     });
+
+    const response = await axios.get(config.url, { params: config.params });
 
     if (response.data.error) {
       throw new Error(response.data.error.info || 'Failed to fetch historical data');
@@ -113,12 +141,12 @@ export async function getHistoricalWeather(
  */
 export async function getMarineWeather(query: string): Promise<MarineWeatherData> {
   try {
-    const response = await axios.get(`${BASE_URL}/marine`, {
-      params: {
-        access_key: API_KEY,
-        query,
-      },
+    const config = getRequestConfig('marine', {
+      access_key: API_KEY,
+      query,
     });
+
+    const response = await axios.get(config.url, { params: config.params });
 
     if (response.data.error) {
       throw new Error(response.data.error.info || 'Failed to fetch marine data');
@@ -154,7 +182,7 @@ export async function searchLocations(query: string): Promise<string[]> {
   };
 
   const lowerQuery = query.toLowerCase();
-  
+
   // Check if query matches a country
   for (const [country, cities] of Object.entries(commonCities)) {
     if (country.includes(lowerQuery) || lowerQuery.includes(country)) {
@@ -164,7 +192,7 @@ export async function searchLocations(query: string): Promise<string[]> {
 
   // Otherwise return all cities that match the query
   const allCities = Object.values(commonCities).flat();
-  return allCities.filter(city => 
+  return allCities.filter(city =>
     city.toLowerCase().includes(lowerQuery)
   ).slice(0, 5);
 }
