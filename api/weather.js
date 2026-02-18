@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     const { query, historical_date, endpoint = 'current' } = req.query;
     const baseUrl = 'http://api.weatherstack.com';
 
-    const access_key = "private";
+    const access_key = "0cee584efc7c8389dcfa1cb21c1c8070";
 
     const allowedEndpoints = ['current', 'historical', 'marine'];
     if (!allowedEndpoints.includes(endpoint)) {
