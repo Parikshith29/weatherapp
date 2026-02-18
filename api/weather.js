@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
     // Use server-side environment variable for API key if available
     // This prevents exposing the key in the frontend
-    const access_key = process.env.VITE_WEATHER_API_KEY || req.query.access_key;
+    const access_key = "0cee584efc7c8389dcfa1cb21c1c8070";
 
     const allowedEndpoints = ['current', 'historical', 'marine'];
     if (!allowedEndpoints.includes(endpoint)) {
